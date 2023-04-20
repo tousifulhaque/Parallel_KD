@@ -21,5 +21,5 @@ echo "MASTER_ADDR="$MASTER_ADDR
 
 source Parallel_Multimodal/bin/activate
 
-srun python hello_worldmpi.py
+srun python simple_parallel.py
 
