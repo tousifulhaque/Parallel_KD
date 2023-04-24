@@ -1,4 +1,5 @@
 import torch
+import torchvision
 import numpy as np 
 import os
 import argparse
@@ -6,6 +7,7 @@ import torch.distributed as dist
 from torch.distributed import init_process_group, destroy_process_group
 # from torch.multiprocessing as mp 
 from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 def set_random_seeds(random_seed = 0)
     torch.manual_seed(random_seed)
@@ -31,7 +33,7 @@ def arg_parse():
 
     parser.add_argument('--epoch', default = 100, type = int, help = 'Epoch number')
 
-    parser.add_argument('--batch-size', default = 32, type = int)
+    parser.add_argument('--batch-size', default = 8, type = int)
     args = parser.parse_args()
     return args
 
@@ -51,7 +53,26 @@ def main():
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
 
+    model = torchvision.models.resnet18(pretrained = False)
 
+    #Encapsulate the model with DDP
+    ddp_model = DDP(model, device_ids = [args.rank], output_device = args.rank)
+
+    #Intiate the dataset and distributed sampler
+    transform = transforms.Compose([
+        transforms.RandomCrop(32, padding = 4), 
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
+
+    train_set = torchvision.datasets.CIFAR10(root="data", train = True, download = False, transform = transform)
+    test_set = torchvision.datasets.CIFAR10(root = "data", train = False, download = False, transform = transform)
+
+    # Restricts data loading to a subset of the dataset exclusive to the current process
+    train_sampler = DistributedSampler(dataset= train_set)
+
+    train_loader = DataLoader(dataset = train_set, batch_size = args.batch_size, sampler =train_sampler, num_worker =  )
 
 if __name__ == "__main__":
 
