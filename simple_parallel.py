@@ -42,6 +42,7 @@ def arg_parse():
     args = parser.parse_args()
     return args
 
+
 def evaluate(model , test_loader):
     model.eval()
 
@@ -105,24 +106,29 @@ def main():
 
     #training loop 
     for epoch in range(args.epoch):
-        print(f'Local Rank: {args.rank}, Epoch:{epoch}, Started Training......')
 
         #Save and evaluate model 
         if epoch % 10 == 0 : 
             if args.rank == 0 :
                 accuracy = evaluate(model = ddp_model, test_loader = test_loader)
                 print("-"* 75)
-                print(f'Epoch: {epoch+1}, Accuracy: {accuracy}')
+                print(f'Local rank {args.rank}, Epoch: {epoch+1}, Val_Acc: {accuracy}')
         
         ddp_model.train()
-
+        total = 0
+        correct = 0 
+        train_acc = 0
         for data in train_loader:
             inputs, labels = data[0], data[1]
+            total += labels.size(0) 
             optimizer.zero_grad()
-            outputs = ddp_model(inputs)
+            pred = ddp_model(inputs)
+            correct += (pred == labels).sum().item()
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+        train_acc  = round( correct / total , 3) 
+        pritn(f'Local rank {args.rank}, Epoch{epoch}, Train Acc {train_acc}')
 
 if __name__ == "__main__":
 
@@ -133,3 +139,4 @@ if __name__ == "__main__":
 
     
 
+ 
