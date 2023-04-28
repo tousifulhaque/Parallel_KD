@@ -38,7 +38,7 @@ def arg_parse():
 
     parser.add_argument('--epoch', default = 100, type = int, help = 'Epoch number')
 
-    parser.add_argument('--batch-size', default = 8, type = int)
+    parser.add_argument('--batch-size', default = 16, type = int)
     args = parser.parse_args()
     return args
 
@@ -122,13 +122,14 @@ def main():
             inputs, labels = data[0], data[1]
             total += labels.size(0) 
             optimizer.zero_grad()
-            pred = ddp_model(inputs)
+            output = ddp_model(inputs)
+            _, pred = torch.max(output.data, 1)
             correct += (pred == labels).sum().item()
-            loss = criterion(outputs, labels)
+            loss = criterion(output, labels)
             loss.backward()
             optimizer.step()
-        train_acc  = round( correct / total , 3) 
-        pritn(f'Local rank {args.rank}, Epoch{epoch}, Train Acc {train_acc}')
+            train_acc  = round( correct / total , 3) 
+            print(f'Local rank {args.rank}, Epoch{epoch}, Train Acc {train_acc}')
 
 if __name__ == "__main__":
 
