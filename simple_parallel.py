@@ -36,7 +36,7 @@ def arg_parse():
 
     parser.add_argument('--lr', default = 0.1 , type = float, help = 'Learning rate for model')
 
-    parser.add_argument('--epoch', default = 100, type = int, help = 'Epoch number')
+    parser.add_argument('--epoch', default = 1, type = int, help = 'Epoch number')
 
     parser.add_argument('--batch-size', default = 16, type = int)
     args = parser.parse_args()
@@ -66,6 +66,7 @@ def main():
     set_random_seeds(random_seed = args.random_seed)
     if "WORLD_SIZE" in os.environ:
         args.world_size = int(os.environ["WORLD_SIZE"])
+    print(args.world_size)
     distributed = args.world_size > 1
 
     if distributed:
@@ -129,7 +130,7 @@ def main():
             loss.backward()
             optimizer.step()
             train_acc  = round( correct / total , 3) 
-            print(f'Local rank {args.rank}, Epoch{epoch}, Train Acc {train_acc}')
+        print(f'Local rank {args.rank}, Epoch{epoch}, Train Acc {train_acc}')
 
 if __name__ == "__main__":
 
