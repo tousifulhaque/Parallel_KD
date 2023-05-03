@@ -38,7 +38,8 @@ def arg_parse():
 
     parser.add_argument('--epoch', default = 1, type = int, help = 'Epoch number')
 
-    parser.add_argument('--batch-size', default = 16, type = int)
+    parser.add_argument('--batch-size', default = 128, type = int)
+    parser.add_argument('--dataset', default = 'fake', type = str)
     args = parser.parse_args()
     return args
 
@@ -90,8 +91,12 @@ def main():
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     ])
 
-    train_set = torchvision.datasets.CIFAR10(root="data", train = True, download = False, transform = transform)
-    test_set = torchvision.datasets.CIFAR10(root = "data", train = False, download = False, transform = transform)
+    if args.dataset == 'cifar10':
+        train_set = torchvision.datasets.CIFAR10(root="data", train = True, download = False, transform = transform)
+        test_set = torchvision.datasets.CIFAR10(root = "data", train = False, download = False, transform = transform)
+    else:
+        train_set = torchvision.datasets.FakeData(size = 100000, transform = transforms.ToTensor())
+        test_set = torchvision.datasets.FakeData(size = 10000, transform = transforms.ToTensor())
 
     # Restricts data loading to a subset of the dataset exclusive to the current process
     train_sampler = DistributedSampler(dataset= train_set)

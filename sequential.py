@@ -35,7 +35,8 @@ def arg_parse():
 
     parser.add_argument('--epoch', default = 1, type = int, help = 'Epoch number')
 
-    parser.add_argument('--batch-size', default = 16, type = int)
+    parser.add_argument('--batch-size', default = 128, type = int)
+    parser.add_argument('--dataset', default = 'fake', type = str)
     args = parser.parse_args()
     return args
 
@@ -73,12 +74,13 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     ])
-
-    train_set = torchvision.datasets.CIFAR10(root="data", train = True, download = False, transform = transform)
-    test_set = torchvision.datasets.CIFAR10(root = "data", train = False, download = False, transform = transform)
+    if args.dataset == 'cifar10':
+        train_set = torchvision.datasets.CIFAR10(root="data", train = True, download = False, transform = transform)
+        test_set = torchvision.datasets.CIFAR10(root = "data", train = False, download = False, transform = transform)
+    else:
+        train_set = torchvision.datasets.FakeData(size = 100000, transform = transforms.ToTensor())
 
     train_loader = DataLoader(dataset = train_set, batch_size = args.batch_size,shuffle = True, num_workers = 0)
-    test_loader = DataLoader(dataset = test_set, batch_size = args.batch_size, shuffle = False, num_workers = 0)
 
     #loss function 
     criterion = nn.CrossEntropyLoss()
@@ -90,18 +92,13 @@ def main():
     for epoch in range(args.epoch):
 
         #Save and evaluate model 
-        if epoch % 10 == 0 : 
-            if args.rank == 0 :
-                accuracy = evaluate(model = model, test_loader = test_loader)
-                print("-"* 75)
-                print(f'Local rank {args.rank}, Epoch: {epoch+1}, Val_Acc: {accuracy}')
-        
         model.train()
         total = 0
         correct = 0 
         train_acc = 0
         for data in train_loader:
             inputs, labels = data[0], data[1]
+            print(inputs.shape)
             total += labels.size(0) 
             optimizer.zero_grad()
             output = model(inputs)
@@ -111,7 +108,7 @@ def main():
             loss.backward()
             optimizer.step()
             train_acc  = round( correct / total , 3) 
-        print(f'Local rank {args.rank}, Epoch{epoch}, Train Acc {train_acc}')
+            print(f' Epoch{epoch+1}, Train Acc {train_acc}')
 
 if __name__ == "__main__":
 
